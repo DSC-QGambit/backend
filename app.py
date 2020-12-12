@@ -55,7 +55,6 @@ def _handle_rss(company, value, count, limit):
             content = Article(entry.link)
             content.download()
             content.parse()
-            content.__dict__
         except Exception as err:
             # If the download for some reason fails (ex. 404) the
             # script will continue downloading the next article.
@@ -65,6 +64,7 @@ def _handle_rss(company, value, count, limit):
         article["title"] = content.title
         article["text"] = content.text
         article["keywords"] = content.keywords
+        article["top_image"] = content.top_image
         news_paper["articles"].append(article)
         # print(f"{count} articles downloaded from {company}, url: {entry.link}")
         count = count + 1
@@ -106,11 +106,12 @@ def _handle_fallback(company, value, count, limit):
             "text": content.text,
             "link": content.url,
             "keywords": content.keywords,
+            "top_image": content.top_image,
             "published": content.publish_date.isoformat(),
         }
         news_paper["articles"].append(article)
         print(
-            f"{count} articles downloaded from {company} using newspaper, url: {content.url}, keywords:{content.keywords}"
+            f"{count} articles downloaded from {company} using newspaper, url: {content.url}, keywords:{content.keywords}, top_images:{content.top_image}"
         )
         count = count + 1
         none_type_count = 0
@@ -136,20 +137,7 @@ def run(config, limit=4):
         print(err)
 
 def news():
-    """News site scraper. Takes a command line argument containing json."""
-
-    # args = list(sys.argv)
-
-    # if len(args) < 2:
-    #     sys.exit("Usage: newsscraper.py NewsPapers.json")
-
-    # limit = 4
-    # if "--limit" in args:
-    #     idx = args.index("--limit")
-    #     limit = int(args[idx + 1])
-    #     args = [args[i] for i in range(len(args)) if i not in (idx, idx + 1)]
-
-    # fname = args[1]
+    """News site scraper."""
     try:
         config = parse_config("NewsPapers.json")
     except Exception as err:
@@ -179,6 +167,7 @@ def get_top_news_keywords():
     return jsonify(keywords_list)
 
 @app.route("/get-top-news-articles/", methods=['GET'])
+@cross_origin()
 def get_top_news_articles():
 
     news()
@@ -197,6 +186,7 @@ def get_top_news_articles():
     return jsonify(articles_list)
 
 @app.route("/post-selected-news-article/", methods=['POST'])
+@cross_origin()
 def post_selected_news_article():
 
     articles_list = []
@@ -216,6 +206,7 @@ def post_selected_news_article():
 #-----------------------------
 
 @app.route("/")
+@cross_origin()
 def pg():
     index()
     print("hihjhhk")
