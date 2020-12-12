@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, redirect, url_for
-# import db
+from flask_cors import CORS
 import json
 app = Flask(__name__)
 from views import index
