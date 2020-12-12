@@ -1,9 +1,7 @@
 from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
 import json
-app = Flask(__name__)
 from views import index
-
 import sys
 import json
 from time import mktime
@@ -12,6 +10,9 @@ from datetime import datetime
 import feedparser as fp
 import newspaper
 from newspaper import Article
+
+app = Flask(__name__)
+CORS(app)
 
 data = {}
 data["newspapers"] = {}

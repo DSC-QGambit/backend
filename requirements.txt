@@ -9,4 +9,4 @@ Werkzeug==0.15.6
 # pymongo==3.11.0
 feedparser
 newspaper3k
-flask_cors
+flask-cors
