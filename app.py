@@ -133,7 +133,6 @@ def run(config, limit=4):
     except Exception as err:
         print(err)
 
-
 def news():
     """News site scraper. Takes a command line argument containing json."""
 
@@ -157,8 +156,8 @@ def news():
 
 #-----------------------------
 
-@app.route("/get-top-news/", methods=['GET'])
-def get_top_news():
+@app.route("/get-top-news-keywords/", methods=['GET'])
+def get_top_news_keywords():
 
     keywords_list = []
     with open("scraped_articles.json", "r") as data_file:
@@ -179,6 +178,7 @@ def get_top_news():
 @app.route("/get-top-news-articles/", methods=['GET'])
 def get_top_news_articles():
 
+    news()
     articles_list = []
     with open("scraped_articles.json", "r") as data_file:
         scraped_file = json.load(data_file)
@@ -215,7 +215,6 @@ def post_selected_news_article():
 @app.route("/")
 def pg():
     index()
-    news()
     print("hihjhhk")
     return "jk"
 
