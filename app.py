@@ -15,6 +15,13 @@ app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS']='Content-Type'
 
+@app.route("/")
+@cross_origin()
+def pg():
+    index()
+    print("hihjhhk")
+    return "jk"
+
 data = {}
 data["newspapers"] = {}
 
@@ -147,7 +154,6 @@ def news():
 #-----------------------------
 
 @app.route("/get-top-news-keywords/", methods=['GET'])
-@cross_origin()
 def get_top_news_keywords():
 
     keywords_list = []
@@ -167,7 +173,6 @@ def get_top_news_keywords():
     return jsonify(keywords_list)
 
 @app.route("/get-top-news-articles/", methods=['GET'])
-@cross_origin()
 def get_top_news_articles():
 
     news()
@@ -186,7 +191,6 @@ def get_top_news_articles():
     return jsonify(articles_list)
 
 @app.route("/post-selected-news-article/", methods=['POST'])
-@cross_origin()
 def post_selected_news_article():
 
     articles_list = []
@@ -204,13 +208,6 @@ def post_selected_news_article():
     return jsonify(articles_list)
 
 #-----------------------------
-
-@app.route("/")
-@cross_origin()
-def pg():
-    index()
-    print("hihjhhk")
-    return "jk"
 
 if __name__ == '__main__':
     # Threaded option to enable multiple instances for multiple user access support
