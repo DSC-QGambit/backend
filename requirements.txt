@@ -8,4 +8,3 @@ Werkzeug==0.15.6
 feedparser
 newspaper3k
 flask-cors
-punkt
