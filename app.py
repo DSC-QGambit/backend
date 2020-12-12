@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, redirect, url_for
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import json
 from views import index
 import sys
@@ -12,7 +12,8 @@ import newspaper
 from newspaper import Article
 
 app = Flask(__name__)
-CORS(app)
+cors = CORS(app)
+app.config['CORS_HEADERS']='Content-Type'
 
 data = {}
 data["newspapers"] = {}
@@ -158,6 +159,7 @@ def news():
 #-----------------------------
 
 @app.route("/get-top-news-keywords/", methods=['GET'])
+@cross_origin()
 def get_top_news_keywords():
 
     keywords_list = []
