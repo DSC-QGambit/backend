@@ -10,7 +10,7 @@ from datetime import datetime
 import feedparser as fp
 import newspaper
 from newspaper import Article
-nltk.download('punkt')
+# nltk.download('punkt')
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -20,8 +20,9 @@ app.config['CORS_HEADERS']='Content-Type'
 @cross_origin()
 def pg():
     index()
-    print("hihjhhk")
     return "jk"
+
+### NEWS PAPER SCRAPING
 
 data = {}
 data["newspapers"] = {}
@@ -152,26 +153,10 @@ def news():
         sys.exit(err)
     run(config)
 
-#-----------------------------
+#------------------------------------------------------------
+### APIS
 
-@app.route("/get-top-news-keywords/", methods=['GET'])
-def get_top_news_keywords():
-
-    keywords_list = []
-    with open("scraped_articles.json", "r") as data_file:
-        scraped_file = json.load(data_file)
-
-    for comp, paper in scraped_file.items():
-        for b, value in paper.items():
-            if "link" not in value:
-                raise ValueError(f"Configuration item {value} missing obligatory 'link'.")
-            else:
-                for article in value['articles']:
-                    for keyword in article['keywords']:
-                        print(keyword)
-                        keywords_list.append(keyword)
-            
-    return jsonify(keywords_list)
+### Returns the list of all articles from scraped_articles.json
 
 @app.route("/get-top-news-articles/", methods=['GET'])
 def get_top_news_articles():
@@ -181,32 +166,66 @@ def get_top_news_articles():
     with open("scraped_articles.json", "r") as data_file:
         scraped_file = json.load(data_file)
 
-    for comp, paper in scraped_file.items():
-        for b, value in paper.items():
-            if "link" not in value:
-                raise ValueError(f"Configuration item {value} missing obligatory 'link'.")
+    for papers, eachpaper in scraped_file.items():
+        for paper, link_and_articles in eachpaper.items():
+            if "link" not in link_and_articles:
+                raise ValueError(f"Configuration item {link_and_articles} missing obligatory 'link'.")
             else:
-                for article in value['articles']:
+                for article in link_and_articles['articles']:
                     articles_list.append(article)
             
     return jsonify(articles_list)
 
-@app.route("/post-selected-news-article/", methods=['POST'])
+### Accepts the article the user clicks on and sends it's keywords 
+### to the twitter data extraction function
+
+@app.route("/post-selected-news-article/", methods=['GET','POST'])
 def post_selected_news_article():
+    response_object = {'status': 'success'}
+    if request.method == 'POST':
+        # print( request.get_json() )
+        for keyword in request.get_json()['keywords']:
+            print(keyword)
+            break
+    return jsonify(response_object)
 
-    articles_list = []
-    with open("scraped_articles.json", "r") as data_file:
-        scraped_file = json.load(data_file)
+# @app.route("/get-selected-news-keywords/", methods=['GET'])
+# def get_selected_news_keywords():
 
-    for comp, paper in scraped_file.items():
-        for b, value in paper.items():
-            if "link" not in value:
-                raise ValueError(f"Configuration item {value} missing obligatory 'link'.")
-            else:
-                for article in value['articles']:
-                    articles_list.append(article)
+#     keywords_list = []
+#     with open("scraped_articles.json", "r") as data_file:
+#         scraped_file = json.load(data_file)
+
+#     for comp, paper in scraped_file.items():
+#         for b, value in paper.items():
+#             if "link" not in value:
+#                 raise ValueError(f"Configuration item {value} missing obligatory 'link'.")
+#             else:
+#                 for article in value['articles']:
+#                     for keyword in article['keywords']:
+#                         print("hi")
+#                         keywords_list.append(keyword)
             
-    return jsonify(articles_list)
+#     return jsonify(keywords_list)
+
+# @app.route("/get-top-news-keywords/", methods=['GET'])
+# def get_top_news_keywords():
+
+#     keywords_list = []
+#     with open("scraped_articles.json", "r") as data_file:
+#         scraped_file = json.load(data_file)
+
+#     for comp, paper in scraped_file.items():
+#         for b, value in paper.items():
+#             if "link" not in value:
+#                 raise ValueError(f"Configuration item {value} missing obligatory 'link'.")
+#             else:
+#                 for article in value['articles']:
+#                     for keyword in article['keywords']:
+#                         keywords_list.append(keyword)
+            
+#     return jsonify(keywords_list)
+
 
 #-----------------------------
 
