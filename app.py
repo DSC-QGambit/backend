@@ -26,6 +26,7 @@ def pg():
 
 data = {}
 data["newspapers"] = {}
+max_articles_from_single_source_limit = 10
 
 def parse_config(fname):
     # Loads the JSON files with news sites
@@ -133,9 +134,9 @@ def run(config, limit=4):
     for company, value in config.items():
         count = 1
         if "rss" in value:
-            count, news_paper = _handle_rss(company, value, count, limit)
+            count, news_paper = _handle_rss(company, value, count, max_articles_from_single_source_limit)
         else:
-            count, news_paper = _handle_fallback(company, value, count, limit)
+            count, news_paper = _handle_fallback(company, value, count, max_articles_from_single_source_limit)
         data["newspapers"][company] = news_paper
 
     # Finally it saves the articles as a JSON-file.
