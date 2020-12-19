@@ -20,7 +20,7 @@ app.config['CORS_HEADERS']='Content-Type'
 @cross_origin()
 def pg():
     index()
-    return "jk"
+    return "k"
 
 ### NEWS PAPER SCRAPING
 
