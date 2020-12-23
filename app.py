@@ -8,7 +8,7 @@ from time import mktime
 import nltk
 from datetime import datetime
 import feedparser as fp
-import newspaper 
+import newspaper
 from newspaper import Article
 
 app = Flask(__name__)
