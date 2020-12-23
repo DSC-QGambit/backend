@@ -9,3 +9,4 @@ feedparser
 newspaper3k
 flask-cors
 nltk
+punkt
