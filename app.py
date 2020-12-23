@@ -10,6 +10,7 @@ from datetime import datetime
 import feedparser as fp
 import newspaper
 from newspaper import Article
+nltk.download('punkt')
 
 app = Flask(__name__)
 cors = CORS(app)
