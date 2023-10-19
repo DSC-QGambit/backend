@@ -4,8 +4,9 @@ gunicorn
 itsdangerous==1.1.0
 Jinja2==2.10.1
 MarkupSafe==1.1.1
-Werkzeug
+# Werkzeug
 feedparser
 newspaper3k
 flask-cors
 nltk
+werkzeug==2.0.3

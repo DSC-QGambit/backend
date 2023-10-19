@@ -1,0 +1,18 @@
+{
+    "breitbart": {
+      "link": "http://www.breitbart.com/"
+    },
+    "bbc": {
+      "link": "http://feeds.bbci.co.uk/news/world/rss.xml"
+    },
+    "times": {
+      "link": "https://timesofindia.indiatimes.com/"
+    },
+    "NYTimes": {
+      "link": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml" 
+    },
+    "Guardian": {
+      "link": "https://www.theguardian.com/world/rss"
+    }
+  }
+  
