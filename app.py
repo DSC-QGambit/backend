@@ -11,16 +11,15 @@ import feedparser as fp
 import newspaper
 from newspaper import Article
 
-import requests
-from bs4 import BeautifulSoup
-# from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer, util
 from transformers import AutoTokenizer, AutoModel
 import torch
 
 nltk.download('punkt')
 
 app = Flask(__name__)
-cors = CORS(app)
+# cors = CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 app.config['CORS_HEADERS']='Content-Type'
 
 @app.route("/")
@@ -162,11 +161,29 @@ def news():
     run(config)
 
 #------------------------------------------------------------
+
+def summarise_article(text):
+    ## Using SUmy package
+    from sumy.parsers.plaintext import PlaintextParser
+    from sumy.nlp.tokenizers import Tokenizer
+    from sumy.summarizers.lex_rank import LexRankSummarizer
+
+    parser = PlaintextParser.from_string(text, Tokenizer("english"))
+    summarizer = LexRankSummarizer()
+    #Summarize the document with 4 sentences
+    summary = summarizer(parser.document, 4)
+    summary_concat = ""
+    for sentence in summary:
+        summary_concat = summary_concat + ' ' + str(sentence)
+
+    return summary_concat
+
 ### APIS
 
 ### Returns the list of all articles from scraped_articles.json
 
 @app.route("/get-top-news-articles/", methods=['GET'])
+@cross_origin()
 def get_top_news_articles():
 
     news()
@@ -180,6 +197,9 @@ def get_top_news_articles():
                 raise ValueError(f"Configuration item {link_and_articles} missing obligatory 'link'.")
             else:
                 for article in link_and_articles['articles']:
+                    article['source'] = str(list(eachpaper.keys())[0])
+                    # print('here')
+                    article['text']=summarise_article(article['text'])
                     articles_list.append(article)
             
     return jsonify(articles_list)
@@ -193,7 +213,7 @@ def post_selected_news_article():
     if request.method == 'POST':
         # print( request.get_json() )
         for keyword in request.get_json()['keywords']:
-            print(keyword)
+            # print(keyword)
             break
     return jsonify(response_object)
 
@@ -211,7 +231,6 @@ def get_selected_news_keywords():
             else:
                 for article in value['articles']:
                     for keyword in article['keywords']:
-                        print("hi")
                         keywords_list.append(keyword)
             
     return jsonify(keywords_list)
@@ -236,121 +255,60 @@ def get_selected_news_keywords():
 
 @app.route("/get-related-news-from-keywords/", methods=['GET','POST'])
 def get_related_news_from_keywords():
-    keywords = request.get_json()
-    print(f'KEYWORDS: {keywords}')
+    import praw
+    from praw.models import MoreComments
 
-    config_file = "NewsPapersSearch.json"
-    matching_articles = []
-    limit = 5 # from each source
+    titles = []
+    titles.append(request.get_json()) # The first in the list is the queried article title
+    ids = [0]
 
-    try:
-        with open(config_file, 'r') as data_file:
-            config = json.load(data_file)
+    reddit_read_only = praw.Reddit(client_id="oVMUat1BYXBgQw-ksed5Hg",         # your client id
+                                client_secret="CKVIiUs4Ma07bP31gSZ3jt0hMqD0AQ",    # your client secret
+                                user_agent="News_Subreddit_Crawler")   # your user agent
 
-        for site, site_data in config.items():
-            count = 0
-            print(f'Site: {site_data}')
-            site_url = site_data['link']
-            response = requests.get(site_url)
+    subreddit = reddit_read_only.subreddit("news")
 
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                articles = soup.find_all('item') + soup.find_all('article')  # You might need to adjust this selector
+    for post in subreddit.new(limit=20):
+        titles.append(post.title)
+        ids.append(post.id)
 
-                for article in articles:
-                    if count > limit:
-                        break
-                    article_text = article.get_text()
-                    # Count the number of matching keywords in the article text
-                    num_matching_keywords = sum(keyword.lower() in article_text.lower() for keyword in keywords)
-                    
-                    # Check if at least 50% of the keywords are common
-                    if num_matching_keywords >= len(keywords) / 6:
-                        matching_articles.append((site, article_text))
-                    # if any(keyword.lower() in article_text.lower() for keyword in keywords):
-                    #     matching_articles.append((site, article_text))
-                    count = count + 1
+    model = SentenceTransformer('all-MiniLM-L6-v2')
 
-    except Exception as e:
-        print(f"Error: {e}")
+    embeddings = model.encode(titles)
+    fixed_article_embedding = embeddings[0]
+    cos_sim_with_fixed_article = util.pytorch_cos_sim(fixed_article_embedding, embeddings)
 
-    # model = SentenceTransformer('all-MiniLM-L6-v2')
+    all_sentence_combinations = []
+    for i in range(len(cos_sim_with_fixed_article[0])):
+        if i != 0:
+            all_sentence_combinations.append([cos_sim_with_fixed_article[0][i], 0, i])
 
-    # # List of sentences
-    # sentences = [
-    #     'A man is eating food.',
-    #     'A man is eating a piece of bread.',
-    #     'The girl is carrying a baby.',
-    #     'A man is riding a horse.',
-    #     'A woman is playing violin.',
-    #     'Two men pushed carts through the woods.',
-    #     'A man is riding a white horse on an enclosed ground.',
-    #     'A monkey is playing drums.',
-    #     'Someone in a gorilla costume is playing a set of drums.'
-    # ]
+    # print(titles)
+    # print(all_sentence_combinations)
 
-    # # Encode all sentences
-    # embeddings = model.encode(sentences)
+    index_of_max_value = max(range(len(all_sentence_combinations)), key=lambda i: all_sentence_combinations[i][0])
 
-    # # Choose the fixed article
-    # fixed_article_index = 0
-    # fixed_article = sentences[fixed_article_index]
+    print("Index of tuple with highest value:", index_of_max_value)
+    print("Tuple with highest value:", all_sentence_combinations[index_of_max_value])
 
-    # # Encode the fixed article
-    # fixed_article_embedding = embeddings[fixed_article_index]
+    submission = reddit_read_only.submission(id=ids[index_of_max_value+1])
 
-    # # Compute cosine similarity between the fixed article and all other articles
-    # cos_sim_with_fixed_article = util.pytorch_cos_sim(fixed_article_embedding, embeddings)
+    post_comments = []
 
-    # # Add all pairs to a list with their cosine similarity score
-    # all_sentence_combinations = []
-    # for i in range(len(cos_sim_with_fixed_article)):
-    #     if i != fixed_article_index:
-    #         all_sentence_combinations.append([cos_sim_with_fixed_article[i], fixed_article_index, i])
+    for comment in submission.comments: #with depth?
+        if type(comment) == MoreComments:
+            continue
 
-    # # Sort list by the lowest cosine similarity score (most dissimilar)
-    # all_sentence_combinations = sorted(all_sentence_combinations, key=lambda x: x[0])
+        post_comments.append(comment.body)
 
-    # print("Top-5 most dissimilar pairs:")
-    # for score, i, j in all_sentence_combinations[:5]:
-    #     print("{} \t {} \t {:.4f}".format(sentences[i], sentences[j], score))
+    for comment in post_comments:
+        print(f'-> {comment}')
+    
+    public_opinion = "Analysis on the reddit thread about the news '{titles[index_of_max_value+1]}' suggest the following sentiments: \n Positive: {x}"
 
-   
-
-
-    #Mean Pooling - Take attention mask into account for correct averaging
-    def mean_pooling(model_output, attention_mask):
-        token_embeddings = model_output[0] #First element of model_output contains all token embeddings
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-        sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
-        sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-        return sum_embeddings / sum_mask
-
-
-
-    #Sentences we want sentence embeddings for
-    sentences = ['This framework generates embeddings for each input sentence',
-                'Sentences are passed as a list of string.',
-                'The quick brown fox jumps over the lazy dog.']
-
-    #Load AutoModel from huggingface model repository
-    tokenizer = AutoTokenizer.from_pretrained("TaylorAI/gte-tiny")
-    model = AutoModel.from_pretrained("TaylorAI/gte-tiny")
-
-    #Tokenize sentences
-    encoded_input = tokenizer(sentences, padding=True, truncation=True, max_length=128, return_tensors='pt')
-
-    #Compute token embeddings
-    with torch.no_grad():
-        model_output = model(**encoded_input)
-
-    #Perform pooling. In this case, mean pooling
-    sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
-
-    return jsonify(matching_articles)
+    return jsonify(0)
 
 #-----------------------------
 
 if __name__ == '__main__':
-    # Threaded option to enable multiple instances for multiple user access support
     app.run(threaded=True, port=5000)
