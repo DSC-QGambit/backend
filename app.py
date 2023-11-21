@@ -162,6 +162,8 @@ def news():
 
 #------------------------------------------------------------
 
+### Helper functions
+
 def summarise_article(text):
     ## Using SUmy package
     from sumy.parsers.plaintext import PlaintextParser
@@ -198,7 +200,6 @@ def get_top_news_articles():
             else:
                 for article in link_and_articles['articles']:
                     article['source'] = str(list(eachpaper.keys())[0])
-                    # print('here')
                     article['text']=summarise_article(article['text'])
                     articles_list.append(article)
             
@@ -253,7 +254,7 @@ def get_selected_news_keywords():
             
 #     return jsonify(keywords_list)
 
-@app.route("/get-related-news-from-keywords/", methods=['GET','POST'])
+@app.route("/get-public-opinion-from-reddit/", methods=['GET','POST'])
 def get_related_news_from_keywords():
     import praw
     from praw.models import MoreComments
@@ -295,18 +296,34 @@ def get_related_news_from_keywords():
 
     post_comments = []
 
-    for comment in submission.comments: #with depth?
+    for comment in submission.comments: # with depth?
         if type(comment) == MoreComments:
             continue
 
         post_comments.append(comment.body)
 
+    from nltk.sentiment import SentimentIntensityAnalyzer
+    sia = SentimentIntensityAnalyzer()
+    # print(sia.polarity_scores("Wow, NLTK is really powerful!"))
+
+    from nltk import tokenize
+    positive_sum, negative_sum, neutral_sum = 0, 0, 0
+    public_sentiments = {'source': titles[index_of_max_value+1], 'pos': 0.0, 'neg': 0.0, 'neu': 0.0}
+
     for comment in post_comments:
         print(f'-> {comment}')
-    
-    public_opinion = "Analysis on the reddit thread about the news '{titles[index_of_max_value+1]}' suggest the following sentiments: \n Positive: {x}"
+        # tokenized_comment_list = tokenize.sent_tokenize(comment)
+        # print(sia.polarity_scores(tokenized_comment_list))
+        positive_sum += sia.polarity_scores(comment)['pos']
+        negative_sum += sia.polarity_scores(comment)['neg']
+        neutral_sum += sia.polarity_scores(comment)['neu']
 
-    return jsonify(0)
+    public_sentiments['pos'] = positive_sum / len(post_comments)
+    public_sentiments['neg'] = negative_sum / len(post_comments)
+    public_sentiments['neu'] = neutral_sum / len(post_comments)
+    # print(public_sentiments)
+
+    return jsonify(public_sentiments)
 
 #-----------------------------
 
