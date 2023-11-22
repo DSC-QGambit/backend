@@ -200,23 +200,53 @@ def get_top_news_articles():
             else:
                 for article in link_and_articles['articles']:
                     article['source'] = str(list(eachpaper.keys())[0])
-                    article['text']=summarise_article(article['text'])
+                    # article['text']=summarise_article(article['text'])
+
                     articles_list.append(article)
             
     return jsonify(articles_list)
 
+
+@app.route("/get-article-summary/", methods=['GET', 'POST'])
+@cross_origin()
+def get_article_summary():
+    from transformers import pipeline
+
+    summarizer = pipeline("summarization", model="mrm8488/t5-base-finetuned-summarize-news", tokenizer="mrm8488/t5-base-finetuned-summarize-news", framework="pt")
+    summary = summarizer(request.get_json(), min_length=5, max_length=500)
+    
+    summary = summary[0]['summary_text']
+    last_period_index = summary.rfind('.')
+    if last_period_index != -1:
+        summary = summary[:last_period_index + 1]
+            
+    return jsonify(summary)
+
 ### Accepts the article the user clicks on and sends it's keywords 
 ### to the twitter data extraction function
 
-@app.route("/post-selected-news-article/", methods=['GET','POST'])
-def post_selected_news_article():
-    response_object = {'status': 'success'}
+@app.route("/get-related-articles/", methods=['GET','POST'])
+def get_related_articles():
+    import praw
+    reddit_read_only = praw.Reddit(client_id="oVMUat1BYXBgQw-ksed5Hg",         # your client id
+                                client_secret="CKVIiUs4Ma07bP31gSZ3jt0hMqD0AQ",    # your client secret
+                                user_agent="News_Subreddit_Crawler")   # your user agent
+    related_reddit_posts = []
+
     if request.method == 'POST':
-        # print( request.get_json() )
         for keyword in request.get_json()['keywords']:
-            # print(keyword)
+            print(keyword)
+            listing = reddit_read_only.subreddit("news").search(keyword)
+            # subreddit = reddit_read_only.subreddit("all").search("OpenAI")
+            print('---')
+
+            for id in listing:
+                post = reddit_read_only.submission(id=id)
+                related_reddit_posts.append([post.title, post.url])
             break
-    return jsonify(response_object)
+
+        print(related_reddit_posts)
+    return jsonify(related_reddit_posts)
 
 @app.route("/get-selected-news-keywords/", methods=['GET'])
 def get_selected_news_keywords():
@@ -236,32 +266,15 @@ def get_selected_news_keywords():
             
     return jsonify(keywords_list)
 
-# @app.route("/get-top-news-keywords/", methods=['GET'])
-# def get_top_news_keywords():
-
-#     keywords_list = []
-#     with open("scraped_articles.json", "r") as data_file:
-#         scraped_file = json.load(data_file)
-
-#     for comp, paper in scraped_file.items():
-#         for b, value in paper.items():
-#             if "link" not in value:
-#                 raise ValueError(f"Configuration item {value} missing obligatory 'link'.")
-#             else:
-#                 for article in value['articles']:
-#                     for keyword in article['keywords']:
-#                         keywords_list.append(keyword)
-            
-#     return jsonify(keywords_list)
 
 @app.route("/get-public-opinion-from-reddit/", methods=['GET','POST'])
-def get_related_news_from_keywords():
+def get_public_opinion_from_reddit():
     import praw
     from praw.models import MoreComments
 
     titles = []
-    titles.append(request.get_json()) # The first in the list is the queried article title
-    ids = [0]
+    ids = []
+    urls = []
 
     reddit_read_only = praw.Reddit(client_id="oVMUat1BYXBgQw-ksed5Hg",         # your client id
                                 client_secret="CKVIiUs4Ma07bP31gSZ3jt0hMqD0AQ",    # your client secret
@@ -272,58 +285,78 @@ def get_related_news_from_keywords():
     for post in subreddit.new(limit=20):
         titles.append(post.title)
         ids.append(post.id)
+        urls.append(post.url)
 
     model = SentenceTransformer('all-MiniLM-L6-v2')
+    query_embeddings = model.encode(request.get_json(), convert_to_tensor=True)
+    corpus_embeddings = model.encode(titles, convert_to_tensor=True)
+    top_matches = util.semantic_search(query_embeddings, corpus_embeddings, top_k=2)
 
-    embeddings = model.encode(titles)
-    fixed_article_embedding = embeddings[0]
-    cos_sim_with_fixed_article = util.pytorch_cos_sim(fixed_article_embedding, embeddings)
+    all_public_sentiments = []
+    for match in top_matches[0]:
+        submission = reddit_read_only.submission(id=ids[match['corpus_id']])
+        post_comments = []
 
-    all_sentence_combinations = []
-    for i in range(len(cos_sim_with_fixed_article[0])):
-        if i != 0:
-            all_sentence_combinations.append([cos_sim_with_fixed_article[0][i], 0, i])
+        for comment in submission.comments: # with depth?
+            if type(comment) == MoreComments:
+                continue
 
-    # print(titles)
-    # print(all_sentence_combinations)
+            if(comment.body != '[removed]'):
+                post_comments.append(comment.body)
 
-    index_of_max_value = max(range(len(all_sentence_combinations)), key=lambda i: all_sentence_combinations[i][0])
+        from transformers import pipeline
+        classifier = pipeline(model="distilbert-base-uncased-finetuned-sst-2-english")
 
-    print("Index of tuple with highest value:", index_of_max_value)
-    print("Tuple with highest value:", all_sentence_combinations[index_of_max_value])
+        positive_sum, negative_sum, neutral_sum = 0, 0, 0
+        public_sentiments = {'source': titles[match['corpus_id']], 'url': urls[match['corpus_id']], 'pos': 0.0, 'neg': 0.0, 'neu': 0.0,
+                             'summary': []}
 
-    submission = reddit_read_only.submission(id=ids[index_of_max_value+1])
-
-    post_comments = []
-
-    for comment in submission.comments: # with depth?
-        if type(comment) == MoreComments:
+        if(len(post_comments) == 0):
+            all_public_sentiments.append(public_sentiments)
             continue
 
-        post_comments.append(comment.body)
+        for comment in post_comments:
+            if(classifier(comment)[0]['label']=='POSITIVE'):
+                positive_sum += classifier(comment)[0]['score']
+            elif(classifier(comment)[0]['label']=='NEGATIVE'):
+                negative_sum += classifier(comment)[0]['score']
+            else:
+                neutral_sum += classifier(comment)[0]['score']
 
-    from nltk.sentiment import SentimentIntensityAnalyzer
-    sia = SentimentIntensityAnalyzer()
-    # print(sia.polarity_scores("Wow, NLTK is really powerful!"))
+        public_sentiments['pos'] = positive_sum / len(post_comments)
+        public_sentiments['neg'] = negative_sum / len(post_comments)
+        public_sentiments['neu'] = neutral_sum / len(post_comments)
 
-    from nltk import tokenize
-    positive_sum, negative_sum, neutral_sum = 0, 0, 0
-    public_sentiments = {'source': titles[index_of_max_value+1], 'pos': 0.0, 'neg': 0.0, 'neu': 0.0}
+        ## K-Means
+        from sklearn.cluster import KMeans
 
-    for comment in post_comments:
-        print(f'-> {comment}')
-        # tokenized_comment_list = tokenize.sent_tokenize(comment)
-        # print(sia.polarity_scores(tokenized_comment_list))
-        positive_sum += sia.polarity_scores(comment)['pos']
-        negative_sum += sia.polarity_scores(comment)['neg']
-        neutral_sum += sia.polarity_scores(comment)['neu']
+        post_comments_embeddings = model.encode(post_comments)
+        num_clusters = 2
+        clustering_model = KMeans(n_clusters=num_clusters)
+        clustering_model.fit(post_comments_embeddings)
+        cluster_assignment = clustering_model.labels_
 
-    public_sentiments['pos'] = positive_sum / len(post_comments)
-    public_sentiments['neg'] = negative_sum / len(post_comments)
-    public_sentiments['neu'] = neutral_sum / len(post_comments)
-    # print(public_sentiments)
+        clustered_sentences = [[] for i in range(num_clusters)]
+        for sentence_id, cluster_id in enumerate(cluster_assignment):
+            clustered_sentences[cluster_id].append(post_comments[sentence_id])
 
-    return jsonify(public_sentiments)
+        summarizer = pipeline("summarization", model="mrm8488/t5-base-finetuned-summarize-news", tokenizer="mrm8488/t5-base-finetuned-summarize-news", framework="pt")
+
+        for i, cluster in enumerate(clustered_sentences):
+            # print("Cluster ", i+1)
+            cluster_string = ' '.join(cluster)
+            summary = summarizer(cluster_string, min_length=5, max_length=300)
+            summary = summary[0]['summary_text']
+            print(summary)
+            last_period_index = summary.rfind('.')
+            if last_period_index != -1:
+                summary = summary[:last_period_index + 1]
+            public_sentiments['summary'].append(summary)
+
+
+        all_public_sentiments.append(public_sentiments)
+
+    return jsonify(all_public_sentiments)
 
 #-----------------------------
 
