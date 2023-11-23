@@ -33,7 +33,7 @@ def pg():
 
 data = {}
 data["newspapers"] = {}
-max_articles_from_single_source_limit = 4
+max_articles_from_single_source_limit = 2
 
 def parse_config(fname):
     # Loads the JSON files with news sites
@@ -127,11 +127,14 @@ def _handle_fallback(company, value, count, limit):
             "top_image": content.top_image,
             "published": content.publish_date.isoformat(),
         }
-        news_paper["articles"].append(article)
-        print(
-            f"{count} articles downloaded from {company} using newspaper, url: {content.url}, keywords:{content.keywords}, top_images:{content.top_image}"
-        )
-        count = count + 1
+
+        existing_titles = [existing_article["title"] for existing_article in news_paper["articles"]]
+        if article["title"] not in existing_titles:
+            news_paper["articles"].append(article)
+            print(
+                f"{count} articles downloaded from {company} using newspaper, url: {content.url}, keywords:{content.keywords}, top_images:{content.top_image}"
+            )
+            count = count + 1
         none_type_count = 0
     return count, news_paper
 
@@ -226,28 +229,34 @@ def get_article_summary():
 ### Accepts the article the user clicks on and sends it's keywords 
 ### to the twitter data extraction function
 
-@app.route("/get-related-articles/", methods=['GET','POST'])
+@app.route("/get-related-articles/", methods=['POST'])
 def get_related_articles():
-    reddit_read_only = praw.Reddit(client_id="oVMUat1BYXBgQw-ksed5Hg",         # your client id
-                                client_secret="CKVIiUs4Ma07bP31gSZ3jt0hMqD0AQ",    # your client secret
-                                user_agent="News_Subreddit_Crawler")   # your user agent
+    reddit_read_only = praw.Reddit(client_id="oVMUat1BYXBgQw-ksed5Hg",
+                                client_secret="CKVIiUs4Ma07bP31gSZ3jt0hMqD0AQ",
+                                user_agent="News_Subreddit_Crawler")
+
     related_reddit_posts = []
     limit = 10
     count = 0
+    search_query = ""
 
-    if request.method == 'POST':
-        for keyword in request.get_json()['keywords']:
-            listing = reddit_read_only.subreddit("news").search(keyword)
+    for keyword in request.get_json()['keywords']:
+        search_query += " " + keyword
+    
+    listing = reddit_read_only.subreddit("news").search(search_query)
+    print(search_query)
+    
+    for id in listing:
+        post = reddit_read_only.submission(id=id)
+        print(post.keys())
+        print("---")
+        related_reddit_posts.append({"title": post.title, "url": post.url})
+        count += 1
+        print(count)
 
-            for id in listing:
-                post = reddit_read_only.submission(id=id)
-                related_reddit_posts.append([post.title, post.url])
-                count += 1
+        if(count == limit):
+            break
 
-            if(count == limit):
-                break
-
-    print(related_reddit_posts)
     return jsonify(related_reddit_posts)
 
 
