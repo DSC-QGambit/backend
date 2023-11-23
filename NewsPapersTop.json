@@ -7,9 +7,6 @@
     "rss": "https://www.theguardian.com/uk/rss",
     "link": "https://www.theguardian.com/world/rss"
   },
-  "washingtonpost": {
-    "link": "https://www.washingtonpost.com/"
-  },
   "times": {
     "link": "https://timesofindia.indiatimes.com/"
   },

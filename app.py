@@ -33,7 +33,7 @@ def pg():
 
 data = {}
 data["newspapers"] = {}
-max_articles_from_single_source_limit = 2
+max_articles_from_single_source_limit = 10
 
 def parse_config(fname):
     # Loads the JSON files with news sites
@@ -61,8 +61,17 @@ def _handle_rss(company, value, count, limit):
         # Check if publish date is provided, if no the article is
         # skipped.  This is done to keep consistency in the data and to
         # keep the script from crashing.
-        if (not hasattr(entry, "published")) or (entry["title"] == "") or (not hasattr(entry, "top_image")) or (entry["text"] == "") or (entry["keywords"] == []):
+        if (not hasattr(entry, "published")):
             continue
+        if ((not hasattr(entry, "top_image")) or (entry["top_image"] == "")):
+            continue
+        if ((not hasattr(entry, "title")) or (entry["title"] == "")):
+            continue
+        if ((not hasattr(entry, "text")) or (entry["text"] == "")):
+            continue
+        if ((not hasattr(entry, "keywords")) or (entry["keywords"] == [])):
+            continue
+
         if count > limit:
             break
         article = {}
@@ -203,7 +212,7 @@ def get_top_news_articles():
                 raise ValueError(f"Configuration item {link_and_articles} missing obligatory 'link'.")
             else:
                 for article in link_and_articles['articles']:
-                    article['source'] = str(list(eachpaper.keys())[0])
+                    article['source'] = paper
                     articles_list.append(article)
             
     return jsonify(articles_list)
@@ -248,8 +257,10 @@ def get_related_articles():
     
     for id in listing:
         post = reddit_read_only.submission(id=id)
-        print(post.keys())
-        print("---")
+        
+        if "megathread" in post.title.lower():
+            continue
+        
         related_reddit_posts.append({"title": post.title, "url": post.url})
         count += 1
         print(count)
