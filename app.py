@@ -33,7 +33,7 @@ def pg():
 
 data = {}
 data["newspapers"] = {}
-max_articles_from_single_source_limit = 10
+max_articles_from_single_source_limit = 4
 
 def parse_config(fname):
     # Loads the JSON files with news sites
@@ -54,10 +54,8 @@ def _handle_rss(company, value, count, limit):
     """
 
     fpd = fp.parse(value["rss"])
-    # print(f"Downloading articles from {company}")
     news_paper = {"rss": value["rss"], "link": value["link"], "articles": []}
     for entry in fpd.entries:
-        # print(f'entry: {entry}')
         # Check if publish date is provided, if no the article is
         # skipped.  This is done to keep consistency in the data and to
         # keep the script from crashing.
@@ -93,7 +91,7 @@ def _handle_rss(company, value, count, limit):
         article["keywords"] = content.keywords
         article["top_image"] = content.top_image
         news_paper["articles"].append(article)
-        print(f"{count} articles downloaded from {company}, url: {entry.link}")
+        print(f"{count} articles downloaded from {company}, title: {entry.title}")
         count = count + 1
     return count, news_paper
 
@@ -102,7 +100,6 @@ def _handle_fallback(company, value, count, limit):
     """This is the fallback method that uses the python newspaper library 
     to extract articles if a RSS-feed link is not provided."""
 
-    # print(f"Building site for {company}")
     paper = newspaper.build(value["link"], memoize_articles=False)
     news_paper = {"link": value["link"], "articles": []}
     none_type_count = 0
@@ -141,7 +138,7 @@ def _handle_fallback(company, value, count, limit):
         if article["title"] not in existing_titles:
             news_paper["articles"].append(article)
             print(
-                f"{count} articles downloaded from {company} using newspaper, url: {content.url}, keywords:{content.keywords}, top_images:{content.top_image}"
+                f"{count} articles downloaded from {company} using newspaper, title: {content.title}"
             )
             count = count + 1
         none_type_count = 0
@@ -177,22 +174,6 @@ def news():
 #------------------------------------------------------------
 
 ### Helper functions
-
-# def summarise_article(text):
-#     ## Using SUmy package
-#     from sumy.parsers.plaintext import PlaintextParser
-#     from sumy.nlp.tokenizers import Tokenizer
-#     from sumy.summarizers.lex_rank import LexRankSummarizer
-
-#     parser = PlaintextParser.from_string(text, Tokenizer("english"))
-#     summarizer = LexRankSummarizer()
-#     #Summarize the document with 4 sentences
-#     summary = summarizer(parser.document, 4)
-#     summary_concat = ""
-#     for sentence in summary:
-#         summary_concat = summary_concat + ' ' + str(sentence)
-
-#     return summary_concat
 
 ### APIS
 
@@ -245,15 +226,14 @@ def get_related_articles():
                                 user_agent="News_Subreddit_Crawler")
 
     related_reddit_posts = []
-    limit = 10
+    limit = 5
     count = 0
     search_query = ""
 
     for keyword in request.get_json()['keywords']:
         search_query += " " + keyword
     
-    listing = reddit_read_only.subreddit("news").search(search_query)
-    print(search_query)
+    listing = reddit_read_only.subreddit("news").search(search_query, time_filter = 'month')
     
     for id in listing:
         post = reddit_read_only.submission(id=id)
@@ -263,7 +243,6 @@ def get_related_articles():
         
         related_reddit_posts.append({"title": post.title, "url": post.url})
         count += 1
-        print(count)
 
         if(count == limit):
             break
@@ -301,7 +280,7 @@ def get_public_opinion_from_reddit():
 
     subreddit = reddit_read_only.subreddit("news")
 
-    for post in subreddit.new(limit=20):
+    for post in subreddit.new(limit=200):
         titles.append(post.title)
         ids.append(post.id)
         urls.append(post.url)
@@ -316,7 +295,7 @@ def get_public_opinion_from_reddit():
         submission = reddit_read_only.submission(id=ids[match['corpus_id']])
         post_comments = []
 
-        for comment in submission.comments: # with depth?
+        for comment in submission.comments: # Without depth
             if type(comment) == MoreComments:
                 continue
 
@@ -369,6 +348,7 @@ def get_public_opinion_from_reddit():
                 max_len = 300
             else:
                 max_len = len(cluster_string)
+            print(len(cluster_string))
             summary = summarizer(cluster_string, min_length=5, max_length=max_len)
             summary = summary[0]['summary_text']
 

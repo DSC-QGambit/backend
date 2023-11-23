@@ -1,0 +1,17 @@
+{
+  "BBC": {
+    "link": "https://www.bbc.com/"
+  },
+  "Washington Post": {
+    "link": "https://www.washingtonpost.com/"
+  },
+  "New York Times": {
+    "link": "https://www.nytimes.com/" 
+  },
+  "BBC2": {
+    "link": "https://www.bbc.com/news/technology"
+  },
+  "AP News": {
+    "link": "https://www.apnews.com/"
+  }
+}
