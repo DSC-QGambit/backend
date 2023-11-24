@@ -23,7 +23,8 @@ nltk.download('punkt')
 
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+# CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+CORS(app, resources={r"/*": {"origins": "https://filterbubble.netlify.app/"}})
 app.config['CORS_HEADERS']='Content-Type'
 
 @app.route("/")
