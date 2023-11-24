@@ -1,10 +1,10 @@
-from flask import Flask, request, jsonify, redirect, url_for
+from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
 import json
 from views import index
 import sys
 from time import mktime
-import nltk
+# import nltk
 from datetime import datetime
 import feedparser as fp
 import newspaper
@@ -19,7 +19,7 @@ from sklearn.cluster import KMeans
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-nltk.download('punkt')
+# nltk.download('punkt')
 
 app = Flask(__name__)
 # cors = CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
