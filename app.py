@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
 import json
-from views import index
 import sys
 from time import mktime
 import nltk
@@ -29,7 +28,6 @@ app.config['CORS_HEADERS']='Content-Type'
 @app.route("/")
 @cross_origin()
 def pg():
-    index()
     return "This is the backend for filter bubble."
 
 ### NEWS PAPER SCRAPING
@@ -218,9 +216,9 @@ def get_top_news_articles():
 def get_article_summary():
     summarizer = pipeline("summarization", model="mrm8488/t5-base-finetuned-summarize-news", tokenizer="mrm8488/t5-base-finetuned-summarize-news", framework="pt")
     input = request.get_json()
-    if len(input) >= 500:
-        max_len = 500
-        input = input[:500]
+    if len(input) >= 100:
+        max_len = 100
+        input = input[:100]
     else:
         max_len = len(input) - 1
     
@@ -243,7 +241,7 @@ def get_related_articles():
                                 user_agent="News_Subreddit_Crawler")
 
     related_reddit_posts = []
-    limit = 3
+    limit = 1
     count = 0
     search_query = ""
 
@@ -331,8 +329,8 @@ def get_public_opinion_from_reddit():
 
         for comment in post_comments:
             comment = request.get_json()
-            if len(comment) >= 512:
-                comment = comment[:512]
+            if len(comment) >= 100:
+                comment = comment[:100]
 
             if(classifier(comment)[0]['label']=='POSITIVE'):
                 positive_sum += classifier(comment)[0]['score']
@@ -348,8 +346,8 @@ def get_public_opinion_from_reddit():
         ### K-Means
 
         post_comments_embeddings = model.encode(post_comments)
-        if len(post_comments)>2:
-            num_clusters = 2
+        if len(post_comments)>1:
+            num_clusters = 1
         else:
             num_clusters = len(post_comments)
 
@@ -367,9 +365,9 @@ def get_public_opinion_from_reddit():
             cluster_string = ' '.join(cluster)
             cluster_string = remove_links(cluster_string)
 
-            if len(cluster_string) >= 300:
-                max_len = 300
-                cluster_string = cluster_string[:300]
+            if len(cluster_string) >= 100:
+                max_len = 100
+                cluster_string = cluster_string[:100]
             else:
                 max_len = len(cluster_string) - 1
             summary = summarizer(cluster_string, min_length=5, max_length=max_len)

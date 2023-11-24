@@ -12,7 +12,7 @@ beautifulsoup4==4.12.2
 feedfinder2==0.0.4
 feedparser==6.0.10
 # filelock==3.12.4
-Flask==3.0.0
+Flask
 Flask-Cors==4.0.0
 # fonttools==4.43.1
 Frozen-Flask==1.0.1
@@ -23,7 +23,7 @@ Frozen-Flask==1.0.1
 # google-auth-httplib2==0.0.3
 # google-auth-oauthlib==0.4.1
 # googleapis-common-protos==1.61.0
-# gunicorn==21.2.0
+gunicorn==21.2.0
 # httplib2==0.22.0
 # huggingface-hub==0.17.3
 # idna==3.4
