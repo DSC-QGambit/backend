@@ -51,7 +51,7 @@ Frozen-Flask==1.0.1
 # networkx==3.2
 # newspaper3k==0.2.8
 nltk==3.8.1
-numpy==1.26.1
+numpy #==1.26.1
 # oauthlib==3.2.2
 # packaging==23.2
 # path==16.7.1
