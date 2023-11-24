@@ -13,11 +13,40 @@ if not hasattr(st, 'already_started_server'):
         app.
     ''')
 
-    from flask_frozen import Freezer
-    from app import app
+    from flask import Flask, request, jsonify
+    from flask_cors import CORS, cross_origin
+    import json
+    from views import index
+    import sys
+    from time import mktime
+    import nltk
+    from datetime import datetime
+    import feedparser as fp
+    import newspaper
+    from newspaper import Article
 
-    freezer = Freezer(app)
+    from sentence_transformers import SentenceTransformer, util
+    from transformers import pipeline
+    import praw
+    from praw.models import MoreComments
+    from sklearn.cluster import KMeans
 
-    freezer.freeze()
+    import os
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-    app.run(host='http://localhost:8501/flask/', port=8501)
+    nltk.download('punkt')
+
+    app = Flask(__name__)
+    # CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+    CORS(app, resources={r"/*": {"origins": "https://filterbubble.netlify.app/"}})
+    app.config['CORS_HEADERS']='Content-Type'
+
+    @app.route("/check/")
+    @cross_origin()
+    def check():
+        st.write("hi")
+        return "This is the backend for filter bubble."
+    
+
+
+    app.run(port=8501)
