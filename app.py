@@ -34,7 +34,7 @@ def pg():
 
 data = {}
 data["newspapers"] = {}
-max_articles_from_single_source_limit = 4
+max_articles_from_single_source_limit = 1
 
 def parse_config(fname):
     # Loads the JSON files with news sites
