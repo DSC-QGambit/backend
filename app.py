@@ -16,6 +16,9 @@ import praw
 from praw.models import MoreComments
 from sklearn.cluster import KMeans
 
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 nltk.download('punkt')
 
 app = Flask(__name__)
@@ -175,6 +178,17 @@ def news():
 
 ### Helper functions
 
+import re
+
+def remove_links(input_string):
+    url_pattern = re.compile(r'https?://\S+|www\.\S+')
+    matches = re.findall(url_pattern, input_string)
+    for match in matches:
+        input_string = input_string.replace(match, '')
+
+    input_string = input_string.replace('[deleted] ', '')
+    return input_string
+
 ### APIS
 
 ### Returns the list of all articles from scraped_articles.json
@@ -203,11 +217,14 @@ def get_top_news_articles():
 @cross_origin()
 def get_article_summary():
     summarizer = pipeline("summarization", model="mrm8488/t5-base-finetuned-summarize-news", tokenizer="mrm8488/t5-base-finetuned-summarize-news", framework="pt")
-    if len(request.get_json()) >= 500:
+    input = request.get_json()
+    if len(input) >= 500:
         max_len = 500
+        input = input[:500]
     else:
-        max_len = len(request.get_json())
-    summary = summarizer(request.get_json(), min_length=5, max_length=max_len)
+        max_len = len(input) - 1
+    
+    summary = summarizer(input, min_length=5, max_length=max_len)
 
     summary = summary[0]['summary_text']
     last_period_index = summary.rfind('.')
@@ -226,7 +243,7 @@ def get_related_articles():
                                 user_agent="News_Subreddit_Crawler")
 
     related_reddit_posts = []
-    limit = 5
+    limit = 3
     count = 0
     search_query = ""
 
@@ -302,7 +319,7 @@ def get_public_opinion_from_reddit():
             if(comment.body != '[removed]'):
                 post_comments.append(comment.body)
 
-        classifier = pipeline(model="distilbert-base-uncased-finetuned-sst-2-english")
+        classifier = pipeline(model="distilbert-base-uncased-finetuned-sst-2-english") # return_all_scores
 
         positive_sum, negative_sum, neutral_sum = 0, 0, 0
         public_sentiments = {'source': titles[match['corpus_id']], 'url': urls[match['corpus_id']], 'pos': 0.0, 'neg': 0.0, 'neu': 0.0,
@@ -313,6 +330,10 @@ def get_public_opinion_from_reddit():
             continue
 
         for comment in post_comments:
+            comment = request.get_json()
+            if len(comment) >= 512:
+                comment = comment[:512]
+
             if(classifier(comment)[0]['label']=='POSITIVE'):
                 positive_sum += classifier(comment)[0]['score']
             elif(classifier(comment)[0]['label']=='NEGATIVE'):
@@ -332,7 +353,7 @@ def get_public_opinion_from_reddit():
         else:
             num_clusters = len(post_comments)
 
-        clustering_model = KMeans(n_clusters=num_clusters)
+        clustering_model = KMeans(n_clusters=num_clusters, n_init="auto")
         clustering_model.fit(post_comments_embeddings)
         cluster_assignment = clustering_model.labels_
 
@@ -344,11 +365,13 @@ def get_public_opinion_from_reddit():
 
         for i, cluster in enumerate(clustered_sentences):
             cluster_string = ' '.join(cluster)
+            cluster_string = remove_links(cluster_string)
+
             if len(cluster_string) >= 300:
                 max_len = 300
+                cluster_string = cluster_string[:300]
             else:
-                max_len = len(cluster_string)
-            print(len(cluster_string))
+                max_len = len(cluster_string) - 1
             summary = summarizer(cluster_string, min_length=5, max_length=max_len)
             summary = summary[0]['summary_text']
 
