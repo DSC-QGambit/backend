@@ -21,20 +21,19 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 nltk.download('punkt')
 
 app = Flask(__name__)
-# CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://filterbubble.netlify.app/"]}})
 app.config['CORS_HEADERS']='Content-Type'
 
 @app.route("/")
 @cross_origin()
-def pg():
+def index():
     return "This is the backend for filter bubble."
 
 ### NEWS PAPER SCRAPING
 
 data = {}
 data["newspapers"] = {}
-max_articles_from_single_source_limit = 1
+max_articles_from_single_source_limit = 10
 
 def parse_config(fname):
     # Loads the JSON files with news sites
@@ -194,7 +193,7 @@ def remove_links(input_string):
 @app.route("/get-top-news-articles/", methods=['GET'])
 @cross_origin()
 def get_top_news_articles():
-    # news()
+    news()
     articles_list = []
     with open("scraped_articles.json", "r") as data_file:
         scraped_file = json.load(data_file)
@@ -216,9 +215,9 @@ def get_top_news_articles():
 def get_article_summary():
     summarizer = pipeline("summarization", model="mrm8488/t5-base-finetuned-summarize-news", tokenizer="mrm8488/t5-base-finetuned-summarize-news", framework="pt")
     input = request.get_json()
-    if len(input) >= 100:
-        max_len = 100
-        input = input[:100]
+    if len(input) >= 500:
+        max_len = 500
+        input = input[:500]
     else:
         max_len = len(input) - 1
     
@@ -241,14 +240,14 @@ def get_related_articles():
                                 user_agent="News_Subreddit_Crawler")
 
     related_reddit_posts = []
-    limit = 1
+    limit = 8
     count = 0
     search_query = ""
 
     for keyword in request.get_json()['keywords']:
         search_query += " " + keyword
     
-    listing = reddit_read_only.subreddit("news").search(search_query, time_filter = 'month')
+    listing = reddit_read_only.subreddit("news+worldnews").search(search_query, time_filter = 'year')
     
     for id in listing:
         post = reddit_read_only.submission(id=id)
@@ -293,7 +292,7 @@ def get_public_opinion_from_reddit():
                                 client_secret="CKVIiUs4Ma07bP31gSZ3jt0hMqD0AQ",    # your client secret
                                 user_agent="News_Subreddit_Crawler")   # your user agent
 
-    subreddit = reddit_read_only.subreddit("news")
+    subreddit = reddit_read_only.subreddit("news+worldnews")
 
     for post in subreddit.new(limit=200):
         titles.append(post.title)
@@ -329,8 +328,8 @@ def get_public_opinion_from_reddit():
 
         for comment in post_comments:
             comment = request.get_json()
-            if len(comment) >= 100:
-                comment = comment[:100]
+            if len(comment) >= 300:
+                comment = comment[:300]
 
             if(classifier(comment)[0]['label']=='POSITIVE'):
                 positive_sum += classifier(comment)[0]['score']
@@ -346,8 +345,8 @@ def get_public_opinion_from_reddit():
         ### K-Means
 
         post_comments_embeddings = model.encode(post_comments)
-        if len(post_comments)>1:
-            num_clusters = 1
+        if len(post_comments)>2:
+            num_clusters = 2
         else:
             num_clusters = len(post_comments)
 
@@ -365,9 +364,9 @@ def get_public_opinion_from_reddit():
             cluster_string = ' '.join(cluster)
             cluster_string = remove_links(cluster_string)
 
-            if len(cluster_string) >= 100:
-                max_len = 100
-                cluster_string = cluster_string[:100]
+            if len(cluster_string) >= 300:
+                max_len = 300
+                cluster_string = cluster_string[:300]
             else:
                 max_len = len(cluster_string) - 1
             summary = summarizer(cluster_string, min_length=5, max_length=max_len)

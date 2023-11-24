@@ -1,17 +1,17 @@
 {
-  "Al Jazeera": {
-    "link": "https://www.aljazeera.com/"
-  },
   "Reuters": {
     "link": "https://www.reuters.com/"
   },
   "Washington Post": {
     "link": "https://www.washingtonpost.com/politics/"
   },
-  "Billboard": {
-    "link": "https://www.billboard.com/"
-  },
   "New York Times": {
     "link": "https://www.nytimes.com/international/section/politics" 
+  },
+  "Al Jazeera": {
+    "link": "https://www.aljazeera.com/"
+  },
+  "Billboard": {
+    "link": "https://www.billboard.com/"
   }
 }
