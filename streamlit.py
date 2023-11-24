@@ -41,7 +41,7 @@ if not hasattr(st, 'already_started_server'):
     CORS(app, resources={r"/*": {"origins": "https://filterbubble.netlify.app/"}})
     app.config['CORS_HEADERS']='Content-Type'
 
-    @app.route("/")
+    @app.route("/check")
     @cross_origin()
     def pg():
         index()
@@ -405,4 +405,4 @@ if not hasattr(st, 'already_started_server'):
     #     # app.run(threaded=True, port=5000)
     #     app.run(threaded=True, debug=False)
 
-    app.run(port=8888)
+    app.run(port=8501)
