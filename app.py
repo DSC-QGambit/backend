@@ -22,7 +22,7 @@ nltk.download('punkt')
 
 app = Flask(__name__)
 # CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
-CORS(app, resources={r"/*": {"origins": "https://filterbubble.netlify.app/"}})
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://filterbubble.netlify.app/"]}})
 app.config['CORS_HEADERS']='Content-Type'
 
 @app.route("/")
@@ -194,7 +194,7 @@ def remove_links(input_string):
 @app.route("/get-top-news-articles/", methods=['GET'])
 @cross_origin()
 def get_top_news_articles():
-    news()
+    # news()
     articles_list = []
     with open("scraped_articles.json", "r") as data_file:
         scraped_file = json.load(data_file)
