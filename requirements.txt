@@ -15,7 +15,7 @@ feedparser==6.0.10
 Flask
 Flask-Cors==4.0.0
 # fonttools==4.43.1
-Frozen-Flask==1.0.1
+# Frozen-Flask==1.0.1
 # fsspec==2023.9.2
 # google-api-core==2.12.0
 # google-api-python-client==1.7.2
