@@ -405,4 +405,4 @@ if not hasattr(st, 'already_started_server'):
     #     # app.run(threaded=True, port=5000)
     #     app.run(threaded=True, debug=False)
 
-    app.run(port=8501)
+    app.run(host='news-article-extraction.streamlit.app', port=8888)
